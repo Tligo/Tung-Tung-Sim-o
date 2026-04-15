@@ -278,3 +278,42 @@ void calcularMelhorJogada(EstadoJogo *e) {
     FOR(i, NUM_COLUNAS)
         procurarJogadaDeColuna(e, i);
 }
+
+/* ═══════════════════════════════════════════════════════════
+ *  UNDO (DESFAZER JOGADA)
+ * ═══════════════════════════════════════════════════════════ */
+
+/* Copia o estado actual das colunas e o contador para um snapshot. */
+static void preencherSnapshot(EstadoJogo *e, EstadoSnapshot *s) {
+    FOR(i, NUM_COLUNAS)
+        s->colunas[i] = e->colunas[i];
+    s->sequencias_removidas = e->sequencias_removidas;
+}
+
+/* Guarda uma fotografia do tabuleiro antes de uma jogada.
+ * Se o histórico estiver cheio, a jogada mais antiga é descartada
+ * (o histórico funciona como pilha de tamanho fixo MAX_HISTORICO). */
+void guardarEstado(EstadoJogo *e) {
+    if (e->historico_topo < MAX_HISTORICO - 1)
+        e->historico_topo++;
+    preencherSnapshot(e, &e->historico[e->historico_topo]);
+}
+
+/* Cancela o último guardado (usado quando a jogada se revelou inválida).
+ * Só decrementa se houver algo guardado. */
+void cancelarGuardado(EstadoJogo *e) {
+    if (e->historico_topo >= 0)
+        e->historico_topo--;
+}
+
+/* Restaura o tabuleiro ao estado anterior ao da última jogada.
+ * Devolve 1 se o undo foi executado, 0 se não há histórico. */
+int desfazerJogada(EstadoJogo *e) {
+    if (e->historico_topo < 0) return 0;
+    EstadoSnapshot *s = &e->historico[e->historico_topo];
+    FOR(i, NUM_COLUNAS)
+        e->colunas[i] = s->colunas[i];
+    e->sequencias_removidas = s->sequencias_removidas;
+    e->historico_topo--;
+    return 1;
+}
